@@ -3,7 +3,7 @@ from typing import List, Dict, Tuple, Optional, Set
 import copy
 from models import (
     Task, Event, AvailabilityWindow, TaskStatusEnum, PriorityEnum,
-    PreferredTimeEnum, HealthScore, StrategyEnum
+    PreferredTimeEnum, HealthScore, StrategyEnum, PreferredSlotsConfig, TimeSlotRange
 )
 
 def parse_dt(dt_str: str) -> datetime:
@@ -36,10 +36,11 @@ class Interval:
         return f"Interval({format_dt(self.start)} -> {format_dt(self.end)}, '{self.label}')"
 
 class DeterministicScheduler:
-    def __init__(self, tasks: List[Task], events: List[Event], availability: List[AvailabilityWindow]):
+    def __init__(self, tasks: List[Task], events: List[Event], availability: List[AvailabilityWindow], preferred_slots: Optional[PreferredSlotsConfig] = None):
         self.tasks = copy.deepcopy(tasks)
         self.events = copy.deepcopy(events)
         self.availability = copy.deepcopy(availability)
+        self.preferred_slots = preferred_slots or PreferredSlotsConfig()
 
     def get_date_range(self) -> Tuple[datetime, datetime]:
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -163,13 +164,26 @@ class DeterministicScheduler:
     def matches_preference(self, start_dt: datetime, pref: PreferredTimeEnum) -> bool:
         if pref == PreferredTimeEnum.ANY:
             return True
-        h = start_dt.hour
-        if pref == PreferredTimeEnum.MORNING and 8 <= h < 12:
-            return True
-        if pref == PreferredTimeEnum.AFTERNOON and 12 <= h < 17:
-            return True
-        if pref == PreferredTimeEnum.EVENING and 17 <= h < 22:
-            return True
+
+        slots = self.preferred_slots or PreferredSlotsConfig()
+
+        def is_in_range(slot: TimeSlotRange) -> bool:
+            try:
+                sh, sm = map(int, slot.start_time.split(":"))
+                eh, em = map(int, slot.end_time.split(":"))
+                t = start_dt.time()
+                st = time(sh, sm)
+                et = time(eh, em)
+                return st <= t < et
+            except Exception:
+                return False
+
+        if pref == PreferredTimeEnum.MORNING:
+            return is_in_range(slots.morning)
+        if pref == PreferredTimeEnum.AFTERNOON:
+            return is_in_range(slots.afternoon)
+        if pref == PreferredTimeEnum.EVENING:
+            return is_in_range(slots.evening)
         return False
 
     def schedule(self, strategy: StrategyEnum = StrategyEnum.PROTECT_DEADLINES) -> Tuple[List[Task], List[Task], HealthScore]:

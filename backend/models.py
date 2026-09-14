@@ -25,6 +25,15 @@ class TaskStatusEnum(str, Enum):
     COMPLETED = "completed"
     CONFLICT = "conflict"
 
+class TimeSlotRange(BaseModel):
+    start_time: str # HH:MM
+    end_time: str   # HH:MM
+
+class PreferredSlotsConfig(BaseModel):
+    morning: TimeSlotRange = Field(default_factory=lambda: TimeSlotRange(start_time="08:00", end_time="12:00"))
+    afternoon: TimeSlotRange = Field(default_factory=lambda: TimeSlotRange(start_time="12:00", end_time="17:00"))
+    evening: TimeSlotRange = Field(default_factory=lambda: TimeSlotRange(start_time="17:00", end_time="22:00"))
+
 # --- Core Entities ---
 
 class Task(BaseModel):
@@ -63,8 +72,8 @@ class Event(BaseModel):
     category: Optional[str] = "general"
 
 class AvailabilityWindow(BaseModel):
-    id: str
-    day_of_week: Optional[int] = None # 0=Mon, 6=Sun or None for specific date
+    id: Optional[str] = None
+    day_of_week: Optional[int] = None # 0=Mon, 6=Sun or None for default/date
     date_str: Optional[str] = None # YYYY-MM-DD
     start_time: str # HH:MM (e.g., "08:00")
     end_time: str   # HH:MM (e.g., "22:00")

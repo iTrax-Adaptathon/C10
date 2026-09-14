@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
-from models import Task, Event, AvailabilityWindow, TaskStatusEnum, PriorityEnum, PreferredTimeEnum, HistoryEntry
+from models import Task, Event, AvailabilityWindow, TaskStatusEnum, PriorityEnum, PreferredTimeEnum, HistoryEntry, PreferredSlotsConfig
 
 # Pre-populated canonical demo data
 def get_canonical_demo_data():
@@ -190,9 +190,30 @@ class Database:
     def get_all_availability(self) -> List[AvailabilityWindow]:
         return list(self.in_memory_availability.values())
 
+    def get_availability(self, avail_id: str) -> Optional[AvailabilityWindow]:
+        return self.in_memory_availability.get(avail_id)
+
     def save_availability(self, avail: AvailabilityWindow) -> AvailabilityWindow:
+        if not avail.id:
+            avail.id = f"avail-{uuid.uuid4().hex[:6]}"
         self.in_memory_availability[avail.id] = avail
         return avail
+
+    def delete_availability(self, avail_id: str) -> bool:
+        if avail_id in self.in_memory_availability:
+            del self.in_memory_availability[avail_id]
+            return True
+        return False
+
+    # Preferred Slots CRUD
+    def get_preferred_slots(self) -> PreferredSlotsConfig:
+        if not hasattr(self, 'in_memory_preferred_slots') or self.in_memory_preferred_slots is None:
+            self.in_memory_preferred_slots = PreferredSlotsConfig()
+        return self.in_memory_preferred_slots
+
+    def save_preferred_slots(self, config: PreferredSlotsConfig) -> PreferredSlotsConfig:
+        self.in_memory_preferred_slots = config
+        return config
 
     # History CRUD
     def get_history(self) -> List[HistoryEntry]:

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import (
     Task, TaskCreate, Event, AvailabilityWindow, ReplanRequest,
     ReplanResponse, ScheduleResponse, ImpactAnalysis, HistoryEntry,
-    ParseRequest, StrategyEnum, HealthScore
+    ParseRequest, StrategyEnum, HealthScore, PreferredSlotsConfig
 )
 from database import db_instance
 from scheduler import DeterministicScheduler, format_dt, parse_dt
@@ -112,6 +112,31 @@ def create_availability(avail: AvailabilityWindow):
         avail.id = f"avail-{uuid.uuid4().hex[:6]}"
     return db_instance.save_availability(avail)
 
+@app.put("/availability/{avail_id}", response_model=AvailabilityWindow)
+def update_availability(avail_id: str, updated_avail: AvailabilityWindow):
+    existing = db_instance.get_availability(avail_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Availability window not found")
+    updated_avail.id = avail_id
+    return db_instance.save_availability(updated_avail)
+
+@app.delete("/availability/{avail_id}")
+def delete_availability(avail_id: str):
+    success = db_instance.delete_availability(avail_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Availability window not found")
+    return {"status": "success", "deleted_id": avail_id}
+
+# --- Preferred Slots API ---
+
+@app.get("/preferred-slots", response_model=PreferredSlotsConfig)
+def get_preferred_slots():
+    return db_instance.get_preferred_slots()
+
+@app.put("/preferred-slots", response_model=PreferredSlotsConfig)
+def update_preferred_slots(config: PreferredSlotsConfig):
+    return db_instance.save_preferred_slots(config)
+
 # --- Scheduler API ---
 
 @app.post("/schedule/generate", response_model=ScheduleResponse)
@@ -119,8 +144,9 @@ def generate_schedule(strategy: StrategyEnum = StrategyEnum.PROTECT_DEADLINES):
     tasks = db_instance.get_all_tasks()
     events = db_instance.get_all_events()
     avail = db_instance.get_all_availability()
+    pref_slots = db_instance.get_preferred_slots()
 
-    scheduler = DeterministicScheduler(tasks, events, avail)
+    scheduler = DeterministicScheduler(tasks, events, avail, pref_slots)
     scheduled, unscheduled, health = scheduler.schedule(strategy=strategy)
 
     # Persist updated scheduled tasks back to DB
@@ -170,13 +196,14 @@ def replan_schedule(req: ReplanRequest):
     tasks = db_instance.get_all_tasks()
     events = db_instance.get_all_events()
     avail = db_instance.get_all_availability()
+    pref_slots = db_instance.get_preferred_slots()
 
     # Calculate initial health score before replan
-    init_scheduler = DeterministicScheduler(before_tasks, events, avail)
+    init_scheduler = DeterministicScheduler(before_tasks, events, avail, pref_slots)
     _, _, init_health = init_scheduler.schedule(strategy=req.strategy)
 
     # Run deterministic replan with selected trade-off strategy
-    scheduler = DeterministicScheduler(tasks, events, avail)
+    scheduler = DeterministicScheduler(tasks, events, avail, pref_slots)
     after_scheduled, after_unscheduled, new_health = scheduler.schedule(strategy=req.strategy)
 
     all_after = after_scheduled + after_unscheduled
