@@ -1,4 +1,4 @@
-import { Task, Event, AvailabilityWindow, ImpactAnalysis, ReplanResponse, Strategy, HealthScore, HistoryEntry } from '../types';
+import { Task, Event, AvailabilityWindow, ImpactAnalysis, ReplanResponse, Strategy, HealthScore, HistoryEntry, PreferredSlotsConfig } from '../types';
 
 const API_BASE = '/api';
 
@@ -71,6 +71,37 @@ export const api = {
 
   getAvailability: async (): Promise<AvailabilityWindow[]> => {
     return fetchJson<AvailabilityWindow[]>('/availability');
+  },
+
+  createAvailability: async (avail: Omit<AvailabilityWindow, 'id'> & { id?: string }): Promise<AvailabilityWindow> => {
+    return fetchJson<AvailabilityWindow>('/availability', {
+      method: 'POST',
+      body: JSON.stringify(avail),
+    });
+  },
+
+  updateAvailability: async (avail: AvailabilityWindow): Promise<AvailabilityWindow> => {
+    return fetchJson<AvailabilityWindow>(`/availability/${avail.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(avail),
+    });
+  },
+
+  deleteAvailability: async (id: string): Promise<void> => {
+    return fetchJson<void>(`/availability/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getPreferredSlots: async (): Promise<PreferredSlotsConfig> => {
+    return fetchJson<PreferredSlotsConfig>('/preferred-slots');
+  },
+
+  updatePreferredSlots: async (config: PreferredSlotsConfig): Promise<PreferredSlotsConfig> => {
+    return fetchJson<PreferredSlotsConfig>('/preferred-slots', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
   },
 
   generateSchedule: async (strategy: Strategy = 'protect_deadlines') => {

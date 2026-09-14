@@ -130,6 +130,17 @@ export const DashboardPage: React.FC = () => {
     await loadData();
   };
 
+  const handlePriorityChange = async (taskId: string, newPriority: 'low' | 'medium' | 'high') => {
+    const taskToUpdate = tasks.find((t) => t.id === taskId);
+    if (!taskToUpdate) return;
+    try {
+      await api.updateTask({ ...taskToUpdate, priority: newPriority });
+      await loadData();
+    } catch (err) {
+      console.error('Failed to update task priority on dashboard:', err);
+    }
+  };
+
   const scheduledTasks = tasks.filter((t) => t.status === 'scheduled');
   const conflictTasks = tasks.filter((t) => t.status === 'conflict');
 
@@ -384,13 +395,25 @@ export const DashboardPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end gap-1">
                     <span className="text-[11px] font-semibold text-slate-500 block font-mono">
                       Due: {task.deadline.split(' ')[1] || task.deadline}
                     </span>
-                    <span className="text-[10px] text-indigo-600 uppercase font-semibold">
-                      {task.priority} Priority
-                    </span>
+                    <select
+                      value={task.priority}
+                      onChange={(e) => handlePriorityChange(task.id, e.target.value as 'low' | 'medium' | 'high')}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer outline-none border transition-all ${
+                        task.priority === 'high'
+                          ? 'bg-rose-50 text-rose-700 border-rose-300'
+                          : task.priority === 'medium'
+                          ? 'bg-amber-50 text-amber-700 border-amber-300'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                      }`}
+                    >
+                      <option value="high">High Priority</option>
+                      <option value="medium">Med Priority</option>
+                      <option value="low">Low Priority</option>
+                    </select>
                   </div>
                 </div>
               ))}

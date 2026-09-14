@@ -38,6 +38,17 @@ export interface AvailabilityWindow {
   end_time: string;
 }
 
+export interface TimeSlotRange {
+  start_time: string;
+  end_time: string;
+}
+
+export interface PreferredSlotsConfig {
+  morning: TimeSlotRange;
+  afternoon: TimeSlotRange;
+  evening: TimeSlotRange;
+}
+
 export interface HealthScore {
   overall: number;
   deadline_safety: number;

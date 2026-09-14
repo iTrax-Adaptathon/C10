@@ -139,13 +139,12 @@ export const QuickAdd: React.FC<QuickAddProps> = ({ onTaskCreated }) => {
 
           <div className="flex items-center space-x-2">
             <span
-              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                parsedPreview.priority === 'high'
+              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${parsedPreview.priority === 'high'
                   ? 'bg-rose-100 text-rose-700 border border-rose-200'
                   : parsedPreview.priority === 'medium'
-                  ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                  : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-              }`}
+                    ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                }`}
             >
               {parsedPreview.priority}
             </span>
