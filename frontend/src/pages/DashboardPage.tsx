@@ -18,16 +18,21 @@ import {
   Layers,
   ChevronRight,
   SlidersHorizontal,
-  RefreshCw
+  RefreshCw,
+  Scale,
+  HeartHandshake
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { api } from '../api/client';
 import { Task, Event, HealthScore, ImpactAnalysis, Strategy, ReplanResponse } from '../types';
 import { QuickAdd } from '../components/QuickAdd';
 import { ImpactModal } from '../components/ImpactModal';
 import { BeforeAfterView } from '../components/BeforeAfterView';
 import { GuidedDemoBanner } from '../components/GuidedDemoBanner';
+import { useToast } from '../context/ToastContext';
 
 export const DashboardPage: React.FC = () => {
+  const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
@@ -43,7 +48,7 @@ export const DashboardPage: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const res = await api.generateSchedule();
+      const res = await api.generateSchedule(activeStrategy);
       setTasks(res.scheduled_tasks.concat(res.unscheduled_tasks));
       setEvents(res.events);
       setHealthScore(res.health_score);
@@ -62,7 +67,6 @@ export const DashboardPage: React.FC = () => {
     loadData();
   };
 
-  // Demo Action 1: Move Team Meeting from 6-7 PM to 8-9 PM
   const handleMoveTeamMeeting = async () => {
     try {
       const allEvents = await api.getEvents();
@@ -76,17 +80,17 @@ export const DashboardPage: React.FC = () => {
         };
         await api.updateEvent(updatedTm);
 
-        // Auto trigger impact analysis
         const impact = await api.analyzeImpact(tm.id, updatedTm.start, updatedTm.end);
         setImpactData(impact);
         setDemoStep(2);
+        toast('Team Meeting Moved to 8 PM!', 'Conflict created with Electronics Assignment.', 'warning');
+        await loadData();
       }
     } catch (err) {
       console.error('Move Team Meeting failed:', err);
     }
   };
 
-  // Demo Action 2: Trigger Impact Analysis manually
   const handleAnalyzeImpact = async () => {
     const tm = events.find((e) => e.title.includes('Team Meeting'));
     if (tm) {
@@ -96,7 +100,6 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  // Demo Action 3: Replan with chosen strategy
   const handleReplan = async (strategy: Strategy) => {
     setActiveStrategy(strategy);
     const tm = events.find((e) => e.title.includes('Team Meeting'));
@@ -117,6 +120,11 @@ export const DashboardPage: React.FC = () => {
       setHealthScore(result.health_score);
       setTasks(result.after_schedule);
       setDemoStep(3);
+      toast(
+        'Schedule Re-Optimized!',
+        `Applied "${strategy.replace('_', ' ')}" strategy with ${result.moved_count} moves.`,
+        'replan'
+      );
     } catch (err) {
       console.error('Replan failed:', err);
     }
@@ -127,18 +135,8 @@ export const DashboardPage: React.FC = () => {
     setReplanResult(null);
     setImpactData(null);
     setDemoStep(0);
+    toast('Demo Reset', 'Restored default canonical schedule.', 'info');
     await loadData();
-  };
-
-  const handlePriorityChange = async (taskId: string, newPriority: 'low' | 'medium' | 'high') => {
-    const taskToUpdate = tasks.find((t) => t.id === taskId);
-    if (!taskToUpdate) return;
-    try {
-      await api.updateTask({ ...taskToUpdate, priority: newPriority });
-      await loadData();
-    } catch (err) {
-      console.error('Failed to update task priority on dashboard:', err);
-    }
   };
 
   const scheduledTasks = tasks.filter((t) => t.status === 'scheduled');
@@ -165,71 +163,71 @@ export const DashboardPage: React.FC = () => {
         />
       )}
 
-      {/* Clean Light Header */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      {/* Hero Header Section */}
+      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-yellow-500/25 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-all">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold uppercase tracking-wider border border-indigo-200 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
-              Live Schedule Engine
+            <span className="px-2.5 py-0.5 rounded-full bg-yellow-400/15 text-yellow-400 text-[10px] font-extrabold uppercase tracking-wider border border-yellow-400/30 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+              Dynamic Engine Live
             </span>
-            <span className="text-slate-300 text-xs">•</span>
-            <span className="text-xs text-slate-500 font-medium">Deterministic Constraints</span>
+            <span className="text-neutral-600 text-xs">•</span>
+            <span className="text-xs text-neutral-400 font-mono">Deterministic Constraint Solver</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-1.5">
-            Adaptive Schedule Dashboard
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mt-2">
+            Adaptive Schedule Studio
           </h1>
-          <p className="text-xs text-slate-500 mt-1 max-w-xl">
-            Real-time schedule adaptation engine. Automatically shifts flexible tasks around fixed calendar conflicts while maximizing deep work blocks.
+          <p className="text-xs text-neutral-400 mt-1 max-w-xl leading-relaxed">
+            Real-time schedule adaptation engine. When disruptions or shifting deadlines occur, topological dependency sorting automatically rebalances your day.
           </p>
         </div>
 
-        {/* Preset Strategy Switcher Quick Controls */}
+        {/* Strategy Switcher Quick Controls */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => handleReplan('protect_deadlines')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center space-x-1.5 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center space-x-1.5 ${
               activeStrategy === 'protect_deadlines'
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-xs font-bold'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                ? 'bg-yellow-400 text-black border-yellow-400 shadow-lg shadow-yellow-400/25 font-black'
+                : 'bg-neutral-900/80 text-neutral-300 border-neutral-800 hover:border-yellow-400/40 hover:text-white'
             }`}
           >
-            <ShieldCheck className="w-4 h-4 text-indigo-600" />
+            <ShieldCheck className="w-4 h-4" />
             <span>Protect Deadlines</span>
           </button>
 
           <button
             onClick={() => handleReplan('balance_workload')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center space-x-1.5 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center space-x-1.5 ${
               activeStrategy === 'balance_workload'
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-xs font-bold'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                ? 'bg-yellow-400 text-black border-yellow-400 shadow-lg shadow-yellow-400/25 font-black'
+                : 'bg-neutral-900/80 text-neutral-300 border-neutral-800 hover:border-yellow-400/40 hover:text-white'
             }`}
           >
-            <Layers className="w-4 h-4 text-indigo-600" />
+            <Scale className="w-4 h-4" />
             <span>Balance Workload</span>
           </button>
 
           <button
             onClick={() => handleReplan('protect_preferences')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center space-x-1.5 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center space-x-1.5 ${
               activeStrategy === 'protect_preferences'
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-300 shadow-xs font-bold'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                ? 'bg-yellow-400 text-black border-yellow-400 shadow-lg shadow-yellow-400/25 font-black'
+                : 'bg-neutral-900/80 text-neutral-300 border-neutral-800 hover:border-yellow-400/40 hover:text-white'
             }`}
           >
-            <Flame className="w-4 h-4 text-indigo-600" />
+            <Flame className="w-4 h-4" />
             <span>Protect Preferences</span>
           </button>
 
-          <div className="h-6 w-px bg-slate-200 hidden sm:block mx-1" />
+          <div className="h-6 w-px bg-neutral-800 hidden sm:block mx-1" />
 
           <button
             onClick={handleMoveTeamMeeting}
-            className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-xs"
+            className="px-3.5 py-2 rounded-xl bg-yellow-400/15 hover:bg-yellow-400/25 text-yellow-300 border border-yellow-400/30 text-xs font-bold flex items-center space-x-1.5 transition-all shadow-xs"
           >
-            <Clock className="w-4 h-4 text-amber-600" />
-            <span>Simulate Conflict (8 PM)</span>
+            <Clock className="w-4 h-4 text-yellow-400" />
+            <span>Simulate Disruption (8 PM)</span>
           </button>
         </div>
       </div>
@@ -253,69 +251,69 @@ export const DashboardPage: React.FC = () => {
       {/* Key Metrics Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Health Score */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="glass-panel p-5 rounded-2xl border border-yellow-500/20 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
               Schedule Health
             </span>
-            <span className="text-2xl font-bold text-slate-900 mt-1 block">
+            <span className="text-3xl font-extrabold font-mono text-yellow-400 mt-1 block">
               {healthScore ? `${healthScore.overall}%` : '--'}
             </span>
-            <span className="text-[10px] text-emerald-600 font-semibold flex items-center mt-0.5">
-              <TrendingUp className="w-3 h-3 mr-1" /> Optimal safety index
+            <span className="text-[10px] text-yellow-400 font-semibold flex items-center mt-0.5">
+              <TrendingUp className="w-3 h-3 mr-1" /> Multi-vector optimization
             </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <Activity className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-2xl bg-yellow-400/15 border border-yellow-400/30 flex items-center justify-center text-yellow-400">
+            <Activity className="w-6 h-6 animate-pulse" />
           </div>
         </div>
 
         {/* Metric 2: Scheduled Tasks */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="glass-panel p-5 rounded-2xl border border-yellow-500/20 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Scheduled Tasks
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+              Placed Tasks
             </span>
-            <span className="text-2xl font-bold text-slate-900 mt-1 block">
+            <span className="text-3xl font-extrabold font-mono text-white mt-1 block">
               {scheduledTasks.length}
             </span>
-            <span className="text-[10px] text-slate-500 mt-0.5">Fixed time slots</span>
+            <span className="text-[10px] text-neutral-400 mt-0.5">Satisfied intervals</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+          <div className="w-12 h-12 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-yellow-400">
             <CheckCircle2 className="w-6 h-6" />
           </div>
         </div>
 
         {/* Metric 3: Active Conflicts */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="glass-panel p-5 rounded-2xl border border-rose-500/20 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Conflicts / Drop Risks
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+              Conflicts / Delays
             </span>
-            <span className="text-2xl font-bold text-rose-600 mt-1 block">
+            <span className="text-3xl font-extrabold font-mono text-rose-400 mt-1 block">
               {conflictTasks.length}
             </span>
-            <span className="text-[10px] text-rose-500 mt-0.5">Requires trade-off</span>
+            <span className="text-[10px] text-rose-400 mt-0.5 font-medium">Requires adaptation</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
             <AlertTriangle className="w-6 h-6" />
           </div>
         </div>
 
         {/* Metric 4: Next Hard Deadline */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="glass-panel p-5 rounded-2xl border border-yellow-500/20 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Next Deadline
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+              Urgent Deadline
             </span>
-            <span className="text-sm font-bold text-slate-900 mt-1 block truncate max-w-[130px]">
+            <span className="text-sm font-bold text-white mt-1 block truncate max-w-[140px]">
               {tasks.length > 0 ? tasks[0].title : 'None'}
             </span>
-            <span className="text-[10px] text-indigo-600 font-medium mt-0.5">
+            <span className="text-[10px] text-yellow-400 font-mono mt-0.5 block">
               {tasks.length > 0 ? tasks[0].deadline : ''}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
+          <div className="w-12 h-12 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400">
             <Clock className="w-6 h-6" />
           </div>
         </div>
@@ -325,13 +323,13 @@ export const DashboardPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Agenda Column (lg:col-span-8) */}
         <div className="lg:col-span-8 space-y-4">
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+          <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-yellow-500/20 shadow-sm">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4 text-indigo-600" />
-                Today's Schedule Blocks
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-yellow-400" />
+                Today's Schedule Agenda
               </h2>
-              <span className="text-xs text-slate-500">Deterministic Slots</span>
+              <span className="text-xs text-yellow-400/80 font-mono">Deterministic Time Slots</span>
             </div>
 
             {/* Timeline List */}
@@ -340,110 +338,110 @@ export const DashboardPage: React.FC = () => {
               {events.map((evt) => (
                 <div
                   key={evt.id}
-                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between"
+                  className="p-4 rounded-2xl bg-black/60 border border-neutral-800 flex items-center justify-between hover:border-neutral-700 transition-colors"
                 >
                   <div className="flex items-center space-x-3.5">
-                    <div className="w-2.5 h-10 rounded-full bg-slate-400 shrink-0" />
+                    <div className="w-2.5 h-10 rounded-full bg-neutral-600 shrink-0" />
                     <div>
                       <div className="flex items-center space-x-2">
-                        <h4 className="text-xs font-bold text-slate-900">{evt.title}</h4>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 uppercase tracking-wider">
+                        <h4 className="text-xs font-bold text-white">{evt.title}</h4>
+                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-neutral-900 text-neutral-400 uppercase tracking-wider border border-neutral-800">
                           Fixed Event
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                      <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
                         {evt.start.split(' ')[1]} - {evt.end.split(' ')[1]}
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs font-semibold text-slate-500">Non-negotiable</span>
+
+                  <span className="text-[11px] font-mono text-neutral-400 px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800">
+                    Locked Slot
+                  </span>
                 </div>
               ))}
 
-              {/* Scheduled Adaptive Tasks */}
-              {scheduledTasks.map((task) => (
+              {/* Scheduled Tasks */}
+              {scheduledTasks.map((t) => (
                 <div
-                  key={task.id}
-                  className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
-                    task.priority === 'high'
-                      ? 'bg-indigo-50/50 border-indigo-200 text-indigo-950'
-                      : 'bg-white border-slate-200 text-slate-800'
-                  }`}
+                  key={t.id}
+                  className="p-4 rounded-2xl bg-black/60 border border-neutral-800/80 flex items-center justify-between hover:border-yellow-400/40 transition-all group"
                 >
                   <div className="flex items-center space-x-3.5">
                     <div
                       className={`w-2.5 h-10 rounded-full shrink-0 ${
-                        task.priority === 'high'
-                          ? 'bg-indigo-600'
-                          : task.priority === 'medium'
-                          ? 'bg-sky-500'
+                        t.priority === 'high'
+                          ? 'bg-rose-500'
+                          : t.priority === 'medium'
+                          ? 'bg-yellow-400'
                           : 'bg-emerald-500'
                       }`}
                     />
                     <div>
                       <div className="flex items-center space-x-2">
-                        <h4 className="text-xs font-bold text-slate-900">{task.title}</h4>
-                        {task.dependencies.length > 0 && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium border border-indigo-200">
-                            Depends on {task.dependencies.join(', ')}
+                        <h4 className="text-xs font-bold text-white group-hover:text-yellow-400 transition-colors">
+                          {t.title}
+                        </h4>
+                        <span
+                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            t.priority === 'high'
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              : t.priority === 'medium'
+                              ? 'bg-yellow-400/20 text-yellow-300 border border-yellow-400/30'
+                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          }`}
+                        >
+                          {t.priority}
+                        </span>
+                        {t.is_split && (
+                          <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Split
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-                        {task.scheduled_start?.split(' ')[1]} - {task.scheduled_end?.split(' ')[1]} ({task.duration}m)
+                      <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
+                        {t.scheduled_start?.split(' ')[1]} - {t.scheduled_end?.split(' ')[1]} ({t.duration}m)
                       </p>
                     </div>
                   </div>
 
-                  <div className="text-right flex flex-col items-end gap-1">
-                    <span className="text-[11px] font-semibold text-slate-500 block font-mono">
-                      Due: {task.deadline.split(' ')[1] || task.deadline}
+                  <div className="text-right">
+                    <span className="text-[10px] text-neutral-400 block font-mono">
+                      Due: {t.deadline.split(' ')[1] || t.deadline}
                     </span>
-                    <select
-                      value={task.priority}
-                      onChange={(e) => handlePriorityChange(task.id, e.target.value as 'low' | 'medium' | 'high')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer outline-none border transition-all ${
-                        task.priority === 'high'
-                          ? 'bg-rose-50 text-rose-700 border-rose-300'
-                          : task.priority === 'medium'
-                          ? 'bg-amber-50 text-amber-700 border-amber-300'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                      }`}
-                    >
-                      <option value="high">High Priority</option>
-                      <option value="medium">Med Priority</option>
-                      <option value="low">Low Priority</option>
-                    </select>
+                    <span className="text-[10px] text-yellow-400 font-bold mt-0.5 inline-block">
+                      Placed
+                    </span>
                   </div>
                 </div>
               ))}
 
-              {/* Conflict Tasks */}
+              {/* Unscheduled / Conflicting Tasks */}
               {conflictTasks.map((t) => (
                 <div
                   key={t.id}
-                  className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 flex items-center justify-between"
+                  className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between"
                 >
                   <div className="flex items-center space-x-3.5">
                     <div className="w-2.5 h-10 rounded-full bg-rose-500 shrink-0" />
                     <div>
                       <div className="flex items-center space-x-2">
-                        <h4 className="text-xs font-bold text-rose-950">{t.title}</h4>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 font-bold uppercase">
-                          Conflict
+                        <h4 className="text-xs font-bold text-rose-300">{t.title}</h4>
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 uppercase tracking-wider">
+                          Conflict / Displaced
                         </span>
                       </div>
-                      <p className="text-[11px] text-rose-700 mt-0.5">
-                        {t.unscheduled_reason || 'Cannot fit before hard deadline.'}
+                      <p className="text-[11px] text-rose-400/80 mt-0.5">
+                        {t.unscheduled_reason || 'No viable interval before deadline'}
                       </p>
                     </div>
                   </div>
 
                   <button
-                    onClick={handleAnalyzeImpact}
-                    className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                    onClick={() => handleReplan('protect_deadlines')}
+                    className="px-3 py-1.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black transition-all shadow-sm"
                   >
-                    Resolve Impact
+                    Auto-Adapt
                   </button>
                 </div>
               ))}
@@ -451,56 +449,76 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Health & Audit Column (lg:col-span-4) */}
-        <div className="lg:col-span-4 space-y-4">
-          {/* Health Score Panel */}
+        {/* Right Column: Health Vectors & Trade-Off Radar (lg:col-span-4) */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Health Score Vector Breakdown */}
           {healthScore && (
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-indigo-600" />
-                  Health Breakdown
-                </h3>
-                <span className="text-xs font-bold text-indigo-600">
-                  {healthScore.overall}%
+            <div className="glass-panel p-6 rounded-3xl border border-yellow-500/20 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+                <span className="text-xs font-bold uppercase tracking-wider text-white">
+                  Optimization Vectors
+                </span>
+                <span className="text-xs font-extrabold text-yellow-400 font-mono">
+                  {healthScore.overall}% Overall
                 </span>
               </div>
 
-              <div className="space-y-3 text-xs">
+              <div className="space-y-3">
                 <div>
-                  <div className="flex justify-between text-[11px] text-slate-600 mb-1">
-                    <span>Deadline Safety</span>
-                    <span className="text-slate-900 font-semibold">{healthScore.deadline_safety}%</span>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-yellow-400" /> Deadline Safety
+                    </span>
+                    <span className="font-mono font-bold text-white">{healthScore.deadline_safety}%</span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                  <div className="w-full h-2 rounded-full bg-neutral-900 overflow-hidden">
                     <div
-                      className="h-full bg-indigo-600 rounded-full"
+                      className="h-full bg-yellow-400 rounded-full transition-all duration-500"
                       style={{ width: `${healthScore.deadline_safety}%` }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-[11px] text-slate-600 mb-1">
-                    <span>Conflict Free</span>
-                    <span className="text-slate-900 font-semibold">{healthScore.conflict_free}%</span>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400 flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-yellow-400" /> Conflict-Free Interval
+                    </span>
+                    <span className="font-mono font-bold text-white">{healthScore.conflict_free}%</span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                  <div className="w-full h-2 rounded-full bg-neutral-900 overflow-hidden">
                     <div
-                      className="h-full bg-sky-500 rounded-full"
+                      className="h-full bg-yellow-400 rounded-full transition-all duration-500"
                       style={{ width: `${healthScore.conflict_free}%` }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-[11px] text-slate-600 mb-1">
-                    <span>Preference Match</span>
-                    <span className="text-slate-900 font-semibold">{healthScore.preference_fulfillment}%</span>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400 flex items-center gap-1.5">
+                      <Scale className="w-3.5 h-3.5 text-amber-400" /> Workload Balance
+                    </span>
+                    <span className="font-mono font-bold text-white">{healthScore.workload_balance}%</span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                  <div className="w-full h-2 rounded-full bg-neutral-900 overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 rounded-full"
+                      className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                      style={{ width: `${healthScore.workload_balance}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-neutral-400 flex items-center gap-1.5">
+                      <HeartHandshake className="w-3.5 h-3.5 text-yellow-300" /> Preference Fit
+                    </span>
+                    <span className="font-mono font-bold text-white">{healthScore.preference_fulfillment}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-neutral-900 overflow-hidden">
+                    <div
+                      className="h-full bg-yellow-300 rounded-full transition-all duration-500"
                       style={{ width: `${healthScore.preference_fulfillment}%` }}
                     />
                   </div>
@@ -509,37 +527,47 @@ export const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          {/* Audit History Log */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-              <History className="w-4 h-4 text-indigo-600" />
-              What Changed?
-            </h3>
-            <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center justify-between text-slate-500 text-[10px] mb-1">
-                  <span className="font-semibold text-indigo-600">Constraint Engine</span>
-                  <span>Just now</span>
-                </div>
-                <p className="text-slate-700 text-[11px] leading-relaxed">
-                  Calculated optimal schedule. Protected hard deadlines with zero overlap conflicts.
-                </p>
+          {/* Impact Radar Panel */}
+          {impactData && (
+            <div className="glass-panel p-6 rounded-3xl border border-yellow-500/30 shadow-lg space-y-4 bg-yellow-500/5">
+              <div className="flex items-center justify-between pb-3 border-b border-yellow-500/20">
+                <span className="text-xs font-bold uppercase tracking-wider text-yellow-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                  Disruption Impact Radar
+                </span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-yellow-400/20 text-yellow-300">
+                  Active Disruption
+                </span>
               </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="p-3 rounded-xl bg-black border border-neutral-800">
+                  <span className="text-neutral-400 block text-[10px] uppercase">Colliding Item</span>
+                  <span className="font-bold text-white mt-0.5 block">{impactData.target_title}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-black border border-neutral-800 space-y-1">
+                  <span className="text-neutral-400 block text-[10px] uppercase">Displaced Tasks</span>
+                  {impactData.displaced_blocks.map((d, i) => (
+                    <div key={i} className="flex justify-between text-rose-300 font-semibold">
+                      <span>• {d.task_title}</span>
+                      <span className="font-mono text-[10px]">{d.original_start.split(' ')[1]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleReplan('protect_deadlines')}
+                className="w-full py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs shadow-md shadow-yellow-400/30 transition-all flex items-center justify-center gap-2"
+              >
+                <span>Re-Solve Schedule</span>
+                <ArrowUpRight className="w-3.5 h-3.5 stroke-[3]" />
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
-
-      {/* Strategy Trade-off Impact Modal */}
-      {impactData && (
-        <ImpactModal
-          impact={impactData}
-          onClose={() => setImpactData(null)}
-          onReplan={handleReplan}
-        />
-      )}
     </div>
   );
 };
-
-

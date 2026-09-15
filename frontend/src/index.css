@@ -4,63 +4,79 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-500/20 selection:text-indigo-900;
+    @apply bg-[#050505] text-neutral-100 font-sans antialiased selection:bg-yellow-400 selection:text-black transition-colors duration-200;
+  }
+  .light body,
+  html:not(.dark) body {
+    @apply bg-neutral-900 text-neutral-100 selection:bg-yellow-400 selection:text-black;
   }
 }
 
-/* Minimalist Light Design System */
+/* Black & Yellow Glassmorphism & Card Tokens */
 .glass-panel {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  background: rgba(12, 12, 15, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(250, 204, 21, 0.18);
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.8);
 }
 
 .glass-card {
-  background: #ffffff;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  background: rgba(22, 22, 26, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .glass-card-hover {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .glass-card-hover:hover {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  background: rgba(28, 28, 34, 0.85);
+  border-color: rgba(250, 204, 21, 0.5);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(250, 204, 21, 0.2);
+  transform: translateY(-2px);
 }
 
 .glass-input {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: rgba(15, 15, 18, 0.8);
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  color: #fefce8;
 }
 .glass-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: #facc15;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.25);
   outline: none;
 }
 
-/* Subtle Clean Accents */
+/* Ambient Subtle Patterns */
 .bg-grid-pattern {
-  background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+  background-image: radial-gradient(rgba(250, 204, 21, 0.1) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-/* Clean Custom Scrollbars */
+/* Glowing Border & Neon Accent */
+.glow-yellow {
+  box-shadow: 0 0 30px -3px rgba(250, 204, 21, 0.45);
+}
+
+.glow-amber {
+  box-shadow: 0 0 30px -3px rgba(245, 158, 11, 0.45);
+}
+
+/* Clean Custom Scrollbars (Yellow Glow) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f8fafc;
+  background: #050505;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(250, 204, 21, 0.3);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(250, 204, 21, 0.7);
 }
-
-

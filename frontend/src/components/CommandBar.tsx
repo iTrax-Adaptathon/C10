@@ -10,8 +10,14 @@ import {
   ArrowRight,
   X,
   Sliders,
-  CheckCircle2
+  CheckCircle2,
+  Target,
+  Share2,
+  SunMoon,
+  Scale,
+  ShieldCheck
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface CommandBarProps {
   isOpen: boolean;
@@ -46,34 +52,78 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 
   const presets = [
     {
+      title: 'Launch What-If Disruption Simulator',
+      desc: 'Simulate emergency shocks, traffic delays, or meeting overruns',
+      icon: Zap,
+      tag: 'Chaos Lab',
+      action: 'open_chaos_lab'
+    },
+    {
+      title: 'Open Live Focus HUD & Pomodoro',
+      desc: 'Enter distraction-free active task timer with +15m auto-replan',
+      icon: Target,
+      tag: 'Focus Mode',
+      action: 'open_focus_mode'
+    },
+    {
+      title: 'Sync & Export Schedule (.ICS / Markdown)',
+      desc: 'Download RFC 5545 iCalendar or copy daily standup checklist',
+      icon: Share2,
+      tag: 'Export',
+      action: 'open_export'
+    },
+    {
+      title: 'Toggle Dark / Light Mode',
+      desc: 'Switch between dark deep-space theme and crisp light theme',
+      icon: SunMoon,
+      tag: 'Theme',
+      action: 'toggle_theme'
+    },
+    {
+      title: 'Replan: Protect Deadlines',
+      desc: 'Topologically minimize tardiness and pack schedule tightly',
+      icon: ShieldCheck,
+      tag: 'Strategy',
+      action: 'replan_deadlines'
+    },
+    {
+      title: 'Replan: Balance Workload',
+      desc: 'Evenly distribute tasks to prevent cognitive overload & burnout',
+      icon: Scale,
+      tag: 'Strategy',
+      action: 'replan_balanced'
+    },
+    {
+      title: 'Replan: Protect Preferences',
+      desc: 'Strictly satisfy preferred morning/evening time windows',
+      icon: Sparkles,
+      tag: 'Strategy',
+      action: 'replan_preferences'
+    },
+    {
       title: 'Move Team Meeting to 8:00 PM',
-      desc: 'Simulate evening meeting delay & trigger impact radar',
+      desc: 'Simulate evening meeting disruption and inspect ripple radar',
       icon: Clock,
       tag: 'Demo Impact',
       action: 'move_team_meeting'
     },
     {
-      title: 'Apply Balanced Strategy',
-      desc: 'Replan schedule optimizing for 85%+ health score',
-      icon: Zap,
-      tag: 'Auto Replan',
-      action: 'replan_balanced'
-    },
-    {
-      title: 'Protect 2-Hour Deep Work Block',
-      desc: 'Schedule focus time during peak productivity window',
-      icon: Sparkles,
-      tag: 'Deep Work',
-      action: 'protect_deep_work'
-    },
-    {
       title: 'Reset Canonical Demo State',
-      desc: 'Restore default events, tasks, and initial timeline',
+      desc: 'Restore default events, tasks, and canonical schedule',
       icon: Sliders,
       tag: 'Reset',
       action: 'reset_demo'
     }
   ];
+
+  const filteredPresets = query.trim()
+    ? presets.filter(
+        (p) =>
+          p.title.toLowerCase().includes(query.toLowerCase()) ||
+          p.desc.toLowerCase().includes(query.toLowerCase()) ||
+          p.tag.toLowerCase().includes(query.toLowerCase())
+      )
+    : presets;
 
   const handleRunPreset = async (action: string) => {
     setIsProcessing(true);
@@ -82,12 +132,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({
       if (onCommandExecute) {
         await onCommandExecute(action);
       }
-      setStatusMsg('Success! Schedule updated.');
+      setStatusMsg('Success! Executed.');
       setTimeout(() => {
         setStatusMsg(null);
         setIsProcessing(false);
         onClose();
-      }, 600);
+      }, 400);
     } catch (err) {
       setStatusMsg('Command execution failed');
       setIsProcessing(false);
@@ -111,7 +161,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         setStatusMsg(null);
         setIsProcessing(false);
         onClose();
-      }, 700);
+      }, 500);
     } catch (err) {
       setStatusMsg('Could not process command');
       setIsProcessing(false);
@@ -119,24 +169,32 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
-      <div className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-black/80 backdrop-blur-md">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+        className="w-full max-w-2xl glass-panel rounded-3xl border border-yellow-500/30 shadow-2xl overflow-hidden text-neutral-100"
+      >
         {/* Input Bar Header */}
-        <form onSubmit={handleNaturalQuerySubmit} className="relative flex items-center border-b border-slate-200 px-4 py-3 bg-slate-50/50">
-          <Sparkles className="w-5 h-5 text-indigo-600 mr-3" />
+        <form
+          onSubmit={handleNaturalQuerySubmit}
+          className="relative flex items-center border-b border-neutral-800 px-5 py-4 bg-[#0a0a0d]"
+        >
+          <Sparkles className="w-5 h-5 text-yellow-400 mr-3 shrink-0" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command e.g. 'Push team meeting by 2 hours'..."
-            className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-sm focus:outline-none"
+            placeholder="Type a command or natural language task (e.g. 'Finish report 90m high priority')..."
+            className="w-full bg-transparent text-white placeholder-neutral-500 text-sm focus:outline-none"
             autoFocus
           />
           {query && (
             <button
               type="submit"
               disabled={isProcessing}
-              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-all shadow-xs flex items-center space-x-1"
+              className="px-3.5 py-1.5 bg-yellow-400 hover:bg-yellow-300 text-black font-black rounded-xl text-xs transition-all shadow-sm shadow-yellow-400/20 flex items-center space-x-1 shrink-0 ml-2"
             >
               <span>Execute</span>
               <ArrowRight className="w-3 h-3" />
@@ -145,7 +203,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="ml-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            className="ml-2 p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -153,48 +211,50 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 
         {/* Status Notification */}
         {statusMsg && (
-          <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 text-indigo-700 text-xs font-medium flex items-center justify-between">
+          <div className="px-5 py-2.5 bg-yellow-400/10 border-b border-yellow-500/30 text-yellow-300 text-xs font-semibold flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Zap className="w-3.5 h-3.5 text-indigo-600" />
+              <Zap className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
               <span>{statusMsg}</span>
             </div>
-            {isProcessing && <div className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />}
+            {isProcessing && (
+              <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+            )}
           </div>
         )}
 
         {/* Preset Suggestions List */}
-        <div className="p-3 max-h-96 overflow-y-auto space-y-1">
-          <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-            <span>Quick Commands & Presets</span>
-            <span className="text-[10px] text-slate-400 font-mono">Press ESC to dismiss</span>
+        <div className="p-3 max-h-[60vh] overflow-y-auto space-y-1">
+          <div className="px-3 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center justify-between">
+            <span>Actions & Presets</span>
+            <span className="font-mono text-[10px] text-neutral-500">ESC to close</span>
           </div>
 
-          {presets.map((preset, idx) => {
+          {filteredPresets.map((preset, idx) => {
             const Icon = preset.icon;
             return (
               <button
                 key={idx}
                 onClick={() => handleRunPreset(preset.action)}
                 disabled={isProcessing}
-                className="w-full text-left p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all group flex items-center justify-between"
+                className="w-full text-left p-3 rounded-2xl hover:bg-neutral-900/70 border border-transparent hover:border-yellow-500/30 transition-all group flex items-center justify-between"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <div className="w-8 h-8 rounded-xl bg-yellow-400/10 border border-yellow-500/30 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-400 group-hover:text-black transition-all">
                     <Icon className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                    <p className="text-xs font-bold text-white group-hover:text-yellow-400 transition-colors">
                       {preset.title}
                     </p>
-                    <p className="text-[11px] text-slate-500">{preset.desc}</p>
+                    <p className="text-[11px] text-neutral-400">{preset.desc}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-neutral-900 text-neutral-400 border border-neutral-800">
                     {preset.tag}
                   </span>
-                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-all" />
+                  <ArrowRight className="w-3.5 h-3.5 text-neutral-500 group-hover:text-yellow-400 transition-all" />
                 </div>
               </button>
             );
@@ -202,14 +262,14 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         </div>
 
         {/* Footer info */}
-        <div className="bg-slate-50 px-4 py-2 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+        <div className="bg-[#0a0a0d] px-5 py-2.5 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-400">
           <div className="flex items-center space-x-2">
-            <Command className="w-3.5 h-3.5 text-slate-400" />
-            <span>Smart Replan Engine • Deterministic NLP Parser</span>
+            <Command className="w-3.5 h-3.5 text-yellow-400" />
+            <span>Replan Adaptive Engine • Press ⌘K or Ctrl+K anytime</span>
           </div>
-          <span>Shortcut: <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-600 font-mono text-[10px] border border-slate-200 shadow-xs">Ctrl + K</kbd></span>
+          <span>Navigation • Instant Solver</span>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
